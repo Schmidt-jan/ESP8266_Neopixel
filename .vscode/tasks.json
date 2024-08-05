@@ -1,0 +1,149 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Configure IDF project",
+            "type": "shell",
+            "command": "make menuconfig",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Set defaults for all new configuration options",
+            "type": "shell",
+            "command": "make defconfig",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build app, bootloader, partition table",
+            "type": "shell",
+            "command": "make all",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Flash app, bootloader, partition table to a chip",
+            "type": "shell",
+            "command": "make flash -j16",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Remove all build output",
+            "type": "shell",
+            "command": "make clean",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Display the static memory footprint of the app",
+            "type": "shell",
+            "command": "make size",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Finer-grained memory footprints",
+            "type": "shell",
+            "command": "make size-components",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Per symbol memory footprint",
+            "type": "shell",
+            "command": "make size-symbols",
+            "group": "build",
+            "problemMatcher": [],
+            "args": [
+                "COMPONENT=<component>"
+            ]
+        },
+        {
+            "label": "Erase entire flash contents",
+            "type": "shell",
+            "command": "make erase_flash",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Erase ota_data partition",
+            "type": "shell",
+            "command": "make erase_otadata",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run idf_monitor tool",
+            "type": "shell",
+            "command": "make monitor",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Monitor serial output on terminal console",
+            "type": "shell",
+            "command": "make simple_monitor",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "List all components in the project",
+            "type": "shell",
+            "command": "make list-components",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build just the app",
+            "type": "shell",
+            "command": "make app",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Flash just the app",
+            "type": "shell",
+            "command": "make app-flash",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Clean just the app",
+            "type": "shell",
+            "command": "make app-clean",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Print the arguments for esptool when flash",
+            "type": "shell",
+            "command": "make print_flash_cmd",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Check that the required python packages are installed",
+            "type": "shell",
+            "command": "make check_python_dependencies",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Flash and monitor",
+            "type": "shell",
+            "command": "make",
+            "args": ["flash", "-j", "16", "simple_monitor"],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Generate assembly file for the app",
+            "type": "shell",
+            "command": "xtensa-lx106-elf-objdump -d -s ${workspaceFolder}/build/neopixel.elf > build/neopixel.asm",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}

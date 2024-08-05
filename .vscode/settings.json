@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "freertos.h": "c",
+        "*.inc": "cpp",
+        "optional": "cpp",
+        "stddef.h": "c",
+        "functional": "cpp",
+        "chrono": "c",
+        "http_parser.h": "c"
+    }
+}
