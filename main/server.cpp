@@ -8,7 +8,7 @@
 
 const char *Server::TAG = "Server";
 
-Server::Server(Controller *controller) : controller(controller)
+Server::Server(Controller& ctrlPtr) : controller(ctrlPtr)
 {
     server = start();
 }
@@ -126,11 +126,7 @@ esp_err_t parse_request_data(const char *buf, request_data *data, cJSON *parsing
             return ESP_FAIL;
         }
 
-        data->color = RgbColor{
-            .r = (uint8_t)r,
-            .g = (uint8_t)g,
-            .b = (uint8_t)b,
-        };
+        data->color = RgbColor(r, g, b);
     }
 
     cJSON_Delete(jsonData);
@@ -210,35 +206,34 @@ esp_err_t Server::color_handler(httpd_req_t *req)
         return result;
     }
 
-    request_data *data = new request_data();
-    if(parse_request_data(buf, data, requestError) != ESP_OK)
+    request_data data = default_request_data();
+    if(parse_request_data(buf, &data, requestError) != ESP_OK)
     {
         auto result = send_error_response(req, requestError);
         cJSON_Delete(jsonData);
-        delete data;
         return result;
     }
     auto self = (Server *)req->user_ctx;
-    if (data->effectSpeed.has_value())
+    if (data.effectSpeed.has_value())
     {
-        self->controller->setEffectSpeed(data->effectSpeed.value());
+        self->controller.setEffectSpeed(data.effectSpeed.value());
     }
-    if (data->color.has_value())
+    if (data.color.has_value())
     {
-        self->controller->setTargetColor(data->color.value());
+        self->controller.setTargetColor(data.color.value());
     }
-    if (data->brightness.has_value())
+    if (data.brightness.has_value())
     {
-        self->controller->setTargetBrightness(data->brightness.value());
+        self->controller.setTargetBrightness(data.brightness.value());
     }    
-    if (data->effect.has_value())
+    if (data.effect.has_value())
     {
-        self->controller->setEffect(data->effect.value());
+        ESP_LOGI(Server::TAG, "Setting effect to %d", data.effect.value());
+        self->controller.setEffect(data.effect.value());
     }
 
     ESP_ERROR_CHECK(httpd_resp_send(req, NULL, 0));
     cJSON_Delete(requestError);
     cJSON_Delete(jsonData);
-    delete data;
     return ESP_OK;
 }

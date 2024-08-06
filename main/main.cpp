@@ -1,4 +1,5 @@
 #include <string.h>
+#include <memory>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -29,12 +30,14 @@ static const char *TAG = "wifi station";
 
 void controllerTask(void *parameter)
 {
-    Controller *controller = (Controller *)parameter;
+    auto ctrlPtr = (Controller *) parameter;
+    delete parameter;
+
     while (1)
     {
-        for (uint8_t i = 0; i < controller->getEffectSpeed(); i++)
+        for (uint8_t i = 0; i < ctrlPtr->getEffectSpeed(); i++)
         {
-            controller->loop();
+            ctrlPtr->loop();
         }
         vTaskDelay(1);
     }
@@ -180,13 +183,15 @@ extern "C" void app_main()
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     wifi_init_sta();
 
-    auto led = new WS2812((gpio_num_t) GPIO_LED_STRIP, NUM_LEDS, PixelOrder::GRB);
 
-    auto controller = new Controller(led);
-    auto server = new Server(controller);
+    auto ledPtr = std::make_unique<WS2812>((gpio_num_t) GPIO_LED_STRIP, NUM_LEDS, PixelOrder::GRB);
+    auto ctrlPtr = new Controller(std::move(ledPtr));
+    auto server = new Server(*ctrlPtr);    
 
-    if (xTaskCreate(controllerTask, "controllerTask", 4096, controller, 1, NULL) != pdPASS)
+
+    if (xTaskCreate(controllerTask, "controllerTask", 4096, &ctrlPtr, 5, NULL) != pdPASS)
     {
-        printf("Failed to create task\n");
+        ESP_LOGE(TAG, "Failed to create controller task");
     }
+
 }

@@ -20,26 +20,14 @@ struct RgbColor {
     uint8_t g;
     uint8_t b;
 
+    RgbColor() : r(0), g(0), b(0) {}
+    RgbColor(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b) {}
+
     bool operator==(const RgbColor &rhs) const {
         return r == rhs.r && g == rhs.g && b == rhs.b;
     }
 
     bool operator!=(const RgbColor &rhs) const {
-        return !(rhs == *this);
-    }
-};
-
-struct WrgbColor {
-    uint8_t w;
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-
-    bool operator==(const WrgbColor &rhs) const {
-        return w == rhs.w && r == rhs.r && g == rhs.g && b == rhs.b;
-    }
-
-    bool operator!=(const WrgbColor &rhs) const {
         return !(rhs == *this);
     }
 };
@@ -64,36 +52,26 @@ public:
     ~WS2812();  
     bool show();
     void clear();
-    void fill(RgbColor color);
-    void fill(WrgbColor color);
-    void setPixelColor(uint16_t n, RgbColor color);
-    void setPixelColor(uint16_t n, WrgbColor color);
+    void fill(const RgbColor&);
+    void setPixelColor(uint16_t n, const RgbColor& color);
     void setBrightness(uint8_t);
-    bool isReady();
-    bool stripHasWhite();    
+    bool isReady() const;
+    bool stripHasWhite() const;    
     uint8_t getPixelCount() const { return numPixels; }
-
-    static WrgbColor Color(uint8_t w, uint8_t r, uint8_t g, uint8_t b) {
-        return WrgbColor {w, r, g, b};
-    }
-
-    static RgbColor Color(uint8_t r, uint8_t g, uint8_t b) {
-        return RgbColor {r, g, b};
-    }
     
 
 private:
-    gpio_num_t pin;
-    uint8_t brightness;
-    uint8_t offW;
-    uint8_t offR;
-    uint8_t offG;
-    uint8_t offB;
-    uint8_t numLedsPerPixel;
+    const gpio_num_t pin;
     uint16_t numPixels;
-    std::vector<uint8_t> *pixels;
-    RtosTimestamp *lastShow;
+    const uint8_t offW;
+    const uint8_t offR;
+    const uint8_t offG;
+    const uint8_t offB;
+    const uint8_t numLedsPerPixel;
+    uint8_t brightness;
+    std::vector<uint8_t> pixels;
+    RtosTimestamp lastShow;
 
-    void enablePin(gpio_num_t pin);
-    void disablePin(gpio_num_t pin);
+    void enablePin(gpio_num_t pin) const;
+    void disablePin(gpio_num_t pin) const;
 };

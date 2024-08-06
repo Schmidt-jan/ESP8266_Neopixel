@@ -9,22 +9,21 @@
  * @param order defines the strip and the color order. For more details see the PixelOrder enum.
  */
 WS2812::WS2812(gpio_num_t pin, uint16_t numPixels, PixelOrder::PixelOrder order)
-    : pin(pin), numPixels(numPixels)
+    : pin(pin),
+      numPixels(numPixels),
+      offW(order >> 9 & 0b111),
+      offR(order >> 6 & 0b111),
+      offG(order >> 3 & 0b111),
+      offB(order & 0b111),
+      numLedsPerPixel(3),
+      brightness(255),
+      pixels(std::vector<uint8_t>(numPixels * numLedsPerPixel)),
+      lastShow(RtosTimestamp())
 {
     enablePin(pin);
-
-    brightness = 255;
-    offW = order >> 9 & 0b111;
-    offR = order >> 6 & 0b111;
-    offG = order >> 3 & 0b111;
-    offB = order & 0b111;
-
-    numLedsPerPixel = (offW = offR) ? 3 : 4;
-    pixels = new std::vector<uint8_t>(numPixels * numLedsPerPixel);
-    lastShow = new RtosTimestamp();
 }
 
-void WS2812::enablePin(gpio_num_t pin)
+void WS2812::enablePin(gpio_num_t pin) const
 {
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_DISABLE;
@@ -35,7 +34,7 @@ void WS2812::enablePin(gpio_num_t pin)
     gpio_config(&io_conf);
 }
 
-void WS2812::disablePin(gpio_num_t pin)
+void WS2812::disablePin(gpio_num_t pin) const
 {
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_DISABLE;
@@ -53,10 +52,6 @@ void WS2812::disablePin(gpio_num_t pin)
  */
 WS2812::~WS2812(void)
 {
-    // Deallocate memory
-    delete pixels;
-    delete lastShow;
-    
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_INPUT;
@@ -72,18 +67,7 @@ WS2812::~WS2812(void)
  */
 void WS2812::clear()
 {
-    fill(WS2812::Color(0, 0, 0));
-}
-
-/**
- * @brief Returns if the strip also contains white LEDs.
- *
- * @return true
- * @return false
- */
-bool WS2812::stripHasWhite()
-{
-    return numLedsPerPixel == 4;
+    fill(RgbColor(0, 0, 0));
 }
 
 /**
@@ -104,66 +88,53 @@ bool WS2812::stripHasWhite()
  *
  * @return
  */
-IRAM_ATTR bool WS2812::show(void) {
-    if (!isReady()) {
+IRAM_ATTR bool WS2812::show(void)
+{
+    if (!isReady())
+    {
         return false;
     }
 
     uint8_t mask = 0x80;
     uint32_t t, time0 = CYCLES_800_T0H, time1 = CYCLES_800_T1H, period = CYCLES_800, startTime = 0, c;
-    uint32_t pinMask = 1ULL << pin;  // Assume 'pin' is defined elsewhere
+    uint32_t pinMask = 1ULL << pin; // Assume 'pin' is defined elsewhere
 
     taskENTER_CRITICAL();
-    for (auto it = pixels->cbegin(); it != pixels->cend(); ++it) {
+    for (auto it = pixels.cbegin(); it != pixels.cend(); ++it)
+    {
         uint8_t pix = (*it) * brightness >> 8;
-        for (int bit = 0; bit < 8; ++bit) {
+        for (int bit = 0; bit < 8; ++bit)
+        {
             t = (pix & mask) ? time1 : time0;
-            while (((c = xthal_get_ccount()) - startTime) < period);
+            while (((c = xthal_get_ccount()) - startTime) < period)
+                ;
             GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pinMask);
             startTime = c;
-            while (((xthal_get_ccount()) - startTime) < t);
+            while (((xthal_get_ccount()) - startTime) < t)
+                ;
             GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pinMask);
 
             mask >>= 1;
-            if (!mask) {
+            if (!mask)
+            {
                 mask = 0x80;
             }
         }
     }
 
     // Ensure the final bit period is complete
-    while ((xthal_get_ccount() - startTime) < period);
+    while ((xthal_get_ccount() - startTime) < period)
+        ;
 
     taskEXIT_CRITICAL();
 
-    lastShow->update();
+    lastShow.update();
     return true;
 }
 
-IRAM_ATTR bool WS2812::isReady()
+IRAM_ATTR bool WS2812::isReady() const
 {
-    return lastShow->tickDiff() > CYCLES_RESET;
-}
-
-
-
-/**
- * @brief Fill the whole strip with the given color.
- *
- * @param color
- */
-void WS2812::fill(WrgbColor color)
-{
-    assert(numLedsPerPixel == 4);
-
-    for (int i = 0; i < numPixels * numLedsPerPixel; i += numLedsPerPixel)
-    {
-        pixels->at(i + offW) = color.w;
-        pixels->at(i + offR) = color.r;
-        pixels->at(i + offG) = color.g;
-        pixels->at(i + offB) = color.b;
-
-    }
+    return lastShow.tickDiff() > CYCLES_RESET;
 }
 
 /**
@@ -171,37 +142,16 @@ void WS2812::fill(WrgbColor color)
  *
  * @param color
  */
-void WS2812::fill(RgbColor color)
+void WS2812::fill(const RgbColor& color)
 {
     assert(numLedsPerPixel == 3);
 
     for (int i = 0; i < numPixels * numLedsPerPixel; i += numLedsPerPixel)
     {
-        pixels->at(i + offR) = color.r;
-        pixels->at(i + offG) = color.g;
-        pixels->at(i + offB) = color.b;
+        pixels.at(i + offR) = color.r;
+        pixels.at(i + offG) = color.g;
+        pixels.at(i + offB) = color.b;
     }
-}
-
-/**
- * @brief Set the color to the nth-Pixel
- *
- * @param num (index) of the pixel whose color you want to change.
- * The first pixel has index 0, last pixel has numPixels - 1.
- * @param color an wrgb-color
- */
-void WS2812::setPixelColor(uint16_t num, WrgbColor color)
-{
-    assert(numLedsPerPixel == 4);
-    if (num >= numPixels)
-        return;
-
-    uint32_t pixIdx = num * numLedsPerPixel;
-
-    pixels->at(pixIdx + offR) = color.r;
-    pixels->at(pixIdx + offG) = color.g;
-    pixels->at(pixIdx + offB) = color.b;
-    pixels->at(pixIdx + offW) = color.w;
 }
 
 /**
@@ -211,7 +161,7 @@ void WS2812::setPixelColor(uint16_t num, WrgbColor color)
  * The first pixel has index 0, last pixel has numPixels - 1.
  * @param color an rgb-color
  */
-void WS2812::setPixelColor(uint16_t num, RgbColor color)
+void WS2812::setPixelColor(uint16_t num, const RgbColor& color)
 {
     assert(numLedsPerPixel == 3);
     if (num >= numPixels)
@@ -219,9 +169,9 @@ void WS2812::setPixelColor(uint16_t num, RgbColor color)
 
     uint32_t pixIdx = num * numLedsPerPixel;
 
-    pixels->at(pixIdx + offR) = color.r;
-    pixels->at(pixIdx + offG) = color.g;
-    pixels->at(pixIdx + offB) = color.b;
+    pixels.at(pixIdx + offR) = color.r;
+    pixels.at(pixIdx + offG) = color.g;
+    pixels.at(pixIdx + offB) = color.b;
 }
 
 /**

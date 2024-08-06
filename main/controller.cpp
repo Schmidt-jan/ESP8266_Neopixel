@@ -12,19 +12,20 @@
 
 #define UPDATE_RAINBOW_CYCLE()
 
+
 const char *Controller::TAG = "Controller";
 
-Controller::Controller(WS2812 *led) : led(led)
+Controller::Controller(std::unique_ptr<WS2812> ledPtr) : 
+    led(std::move(ledPtr)),
+    effect(SOLID),
+    effectSpeed(50),
+    currentColor(RgbColor(0, 0, 0)),
+    targetColor(RgbColor(0, 0, 0)),
+    currentBrightness(255),
+    targetBrightness(255),
+    inTransition(false),
+    latestUpdateShown(false)
 {
-    effect = SOLID;
-    effectSpeed = 50;
-    currentColor = {0, 0, 0};
-    targetColor = {0, 0, 0};
-    currentBrightness = 255;
-    targetBrightness = 255;
-    inTransition = false;
-    latestUpdateShown = false;
-
     led->fill(currentColor);
     led->show();
 }
@@ -46,8 +47,6 @@ void Controller::loop()
 
     setEffectPixels();
 
-    // ESP_LOGI(Controller::TAG, "Phase: %d, Sign: %d, Red: %d, Green: %d, Blue: %d", phase, sign, currentColor.r, currentColor.g, currentColor.b);
-
     if (!latestUpdateShown && led->isReady())
     {
         led->show();
@@ -63,7 +62,6 @@ void Controller::nextRainbowColor(uint8_t *colorMask, int8_t *sign, RgbColor *ta
 {
     uint8_t* colorPtr = reinterpret_cast<uint8_t*>(target);
     int16_t newVal = (colorPtr[*colorMask] + *sign * offset);
-    uint8_t prevColorMask = (*colorMask + 1) % 3;
     uint8_t nextColorMask = (*colorMask + 2) % 3;
     
     if (newVal < 0) {
@@ -117,7 +115,7 @@ void Controller::setEffectPixels()
             // clone the current color
             uint8_t nextPhase = this->phase;
             int8_t nextSign = this->sign;
-            RgbColor nextPixel = RgbColor{currentColor.r, currentColor.g, currentColor.b};
+            RgbColor nextPixel = RgbColor(currentColor.r, currentColor.g, currentColor.b);
             for (uint16_t i = 1; i < led->getPixelCount(); i++)
             {
                 nextRainbowColor(&nextPhase, &nextSign, &nextPixel, 100);
@@ -127,7 +125,7 @@ void Controller::setEffectPixels()
         latestUpdateShown = false;
         break;
     default:
-        ESP_LOGI(Controller::TAG, "Unimplemented effect set");
+        ESP_LOGI(Controller::TAG, "Unimplemented effect set: %d", effect);
     }
 }
 

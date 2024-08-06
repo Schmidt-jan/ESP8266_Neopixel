@@ -1,9 +1,10 @@
 #pragma once
 #include "ws2812.hpp"
 #include "esp_log.h"
+#include <memory>
 
 enum Effect {
-    SOLID,
+    SOLID = 0,
     RAINBOW,
     RAINBOW_CYCLE,
 };
@@ -11,7 +12,7 @@ enum Effect {
 class Controller {
 public:
     static const char *TAG;
-    Controller(WS2812 *led);
+    Controller(std::unique_ptr<WS2812> led);
     ~Controller();
     void loop(void);
     
@@ -34,15 +35,15 @@ public:
     }
 
 private:
-    WS2812 *led;
+    std::unique_ptr<WS2812> led;
     Effect effect;
-    uint8_t effectSpeed = 255;
-    bool inTransition;          // true if the currentColor is not equal to the targetColor
-    bool latestUpdateShown;
+    uint8_t effectSpeed;
     RgbColor currentColor;      // refers to the first pixel (current). All other pixels are calculated from this.
     RgbColor targetColor;       // refers to the first pixel (target). All other pixels are calculated from this.
     uint8_t currentBrightness;
     uint8_t targetBrightness;
+    bool inTransition;          // true if the currentColor is not equal to the targetColor
+    bool latestUpdateShown;
 
     void setEffectPixels();
 

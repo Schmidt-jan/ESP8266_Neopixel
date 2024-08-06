@@ -2,6 +2,7 @@
 #include "controller.hpp"
 #include "esp_log.h"
 #include <optional>
+#include <memory>
 
 struct request_data
 {
@@ -11,18 +12,27 @@ struct request_data
     std::optional<uint8_t> effectSpeed;
 };
 
+request_data default_request_data() {
+    return request_data {
+        .color = std::nullopt,
+        .brightness = std::nullopt,
+        .effect = std::nullopt,
+        .effectSpeed = std::nullopt
+    };
+}
+
 class Server
 {
 public:
     static const char *TAG;
-    Server(Controller *controller);
+    Server(Controller& ctrlPtr);
     ~Server();
     httpd_handle_t start();
     void stop();
     bool isReady();
 
 private:
-    Controller *controller;
+    Controller& controller;
     httpd_handle_t server = NULL;
 
     static esp_err_t status_handler(httpd_req_t *req);
