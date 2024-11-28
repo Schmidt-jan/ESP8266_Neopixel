@@ -134,7 +134,12 @@
             "label": "Flash and monitor",
             "type": "shell",
             "command": "make",
-            "args": ["flash", "-j", "16", "simple_monitor"],
+            "args": [
+                "flash",
+                "-j",
+                "16",
+                "simple_monitor"
+            ],
             "group": "build",
             "problemMatcher": []
         },
@@ -143,6 +148,26 @@
             "type": "shell",
             "command": "xtensa-lx106-elf-objdump -d -s ${workspaceFolder}/build/neopixel.elf > build/neopixel.asm",
             "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Generate SPIFFS image",
+            "type": "shell",
+            "command": "tools/mkspiffs/mkspiffs-0.2.3-7-gf248296-custom-linux64/mkspiffs -c ./data/ -b 4096 -p 256 -s 0xff000 -d 5 ./build/spiffs.bin"
+        },
+        {
+            "label": "Flash SPIFFS image",
+            "type": "shell",
+            "command": "python3 $IDF_PATH/components/esptool_py/esptool/esptool.py --chip esp8266 --port /dev/ttyUSB0 --baud 115200 write_flash 0x101000 ${workspaceFolder}/build/spiffs.bin"
+        },
+        {
+            "label": "Flash bootloader, partition table, app, and SPIFFS image",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Flash app, bootloader, partition table to a chip",
+                "Generate SPIFFS image",
+                "Flash SPIFFS image"
+            ],
             "problemMatcher": []
         }
     ]

@@ -18,6 +18,13 @@
 #include "server.cpp"
 #include "controller.cpp"
 
+#include <stdio.h>
+#include <string.h>
+#include <sys/unistd.h>
+#include <sys/stat.h>
+#include "esp_err.h"
+#include "esp_log.h"
+
 #define GPIO_LED_STRIP CONFIG_ESP_WS2812_PIN
 #define NUM_LEDS CONFIG_ESP_WS2812_NUM_LED
 #define EXAMPLE_ESP_WIFI_SSID CONFIG_ESP_WIFI_SSID
@@ -30,8 +37,7 @@ static const char *TAG = "wifi station";
 
 void controllerTask(void *parameter)
 {
-    auto ctrlPtr = (Controller *) parameter;
-    delete parameter;
+    auto ctrlPtr = static_cast<Controller *>(parameter);
 
     while (1)
     {
@@ -186,10 +192,9 @@ extern "C" void app_main()
 
     auto ledPtr = std::make_unique<WS2812>((gpio_num_t) GPIO_LED_STRIP, NUM_LEDS, PixelOrder::GRB);
     auto ctrlPtr = new Controller(std::move(ledPtr));
-    auto server = new Server(*ctrlPtr);    
+    auto server = new Server(*ctrlPtr);   
 
-
-    if (xTaskCreate(controllerTask, "controllerTask", 4096, &ctrlPtr, 5, NULL) != pdPASS)
+    if (xTaskCreate(controllerTask, "controllerTask", 4096, ctrlPtr, 5, NULL) != pdPASS)
     {
         ESP_LOGE(TAG, "Failed to create controller task");
     }

@@ -46,7 +46,7 @@ void Controller::loop()
     }
 
     setEffectPixels();
-
+    
     if (!latestUpdateShown && led->isReady())
     {
         led->show();

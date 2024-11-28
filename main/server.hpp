@@ -35,8 +35,19 @@ private:
     Controller& controller;
     httpd_handle_t server = NULL;
 
+    esp_err_t mount_storage();
+
+    static esp_err_t landing_page_handler(httpd_req_t *req);
     static esp_err_t status_handler(httpd_req_t *req);
     static esp_err_t color_handler(httpd_req_t *req);
+
+    httpd_uri_t landing_page = {
+        .uri = "/",
+        .method = HTTP_GET,
+        .handler = landing_page_handler,
+        .user_ctx = this
+        };
+
     httpd_uri_t status = {
         .uri = "/status",
         .method = HTTP_GET,

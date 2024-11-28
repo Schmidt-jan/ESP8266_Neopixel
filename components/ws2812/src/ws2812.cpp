@@ -1,4 +1,5 @@
 #include "ws2812.hpp"
+#include "esp_log.h"
 
 /**
  * @brief Create a new pixel strip. The pin is activated as output, and

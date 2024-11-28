@@ -12,7 +12,7 @@ enum Effect {
 class Controller {
 public:
     static const char *TAG;
-    Controller(std::unique_ptr<WS2812> led);
+    Controller(const std::unique_ptr<WS2812> led);
     ~Controller();
     void loop(void);
     

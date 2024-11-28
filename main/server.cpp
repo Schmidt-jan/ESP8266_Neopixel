@@ -5,12 +5,14 @@
 #include <sys/param.h>
 #include "cJSON.h"
 #include "server.hpp"
+#include "esp_spiffs.h"
 
 const char *Server::TAG = "Server";
 
 Server::Server(Controller& ctrlPtr) : controller(ctrlPtr)
 {
     server = start();
+    
 }
 
 Server::~Server()
@@ -33,29 +35,22 @@ httpd_handle_t Server::start()
 
     // Set URI handlers
     ESP_LOGI(Server::TAG, "Registering URI handlers");
-    // ESP_ERROR_CHECK(httpd_register_uri_handler(server, &status));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &status));
     ESP_ERROR_CHECK(httpd_register_uri_handler(server, &color));
+    ESP_ERROR_CHECK(httpd_register_uri_handler(server, &landing_page));
     return server;
 }
+
+esp_err_t Server::mount_storage()
+{
+    return ESP_OK;
+}
+
+
 
 void Server::stop()
 {
     ESP_ERROR_CHECK(httpd_stop(server));
-}
-
-/* An HTTP GET handler */
-esp_err_t Server::status_handler(httpd_req_t *req)
-{
-    cJSON *json = cJSON_CreateObject();
-    cJSON_AddStringToObject(json, "status", "ok");
-    char *resp_str = cJSON_Print(json);
-    ESP_ERROR_CHECK(httpd_resp_set_type(req, "application/json"));
-    ESP_ERROR_CHECK(httpd_resp_send(req, resp_str, strlen(resp_str)));
-
-    cJSON_Delete(json);
-    free(resp_str);
-
-    return ESP_OK;
 }
 
 /**
@@ -160,9 +155,83 @@ esp_err_t send_error_response(httpd_req_t *req, cJSON *error)
     return ESP_OK;
 }
 
-/* An HTTP POST handler */
-esp_err_t Server::color_handler(httpd_req_t *req)
+esp_err_t Server::landing_page_handler(httpd_req_t *req)
 {
+    esp_vfs_spiffs_conf_t conf = {
+        .base_path = "/spiffs",
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = false,
+    };
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            ESP_LOGE(TAG, "Failed to mount or format filesystem");
+        } else if (ret == ESP_ERR_NOT_FOUND) {
+            ESP_LOGE(TAG, "Failed to find SPIFFS partition");
+        } else {
+            ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+        }
+        return ret;
+    }
+
+    size_t total = 0, used = 0;
+    ret = esp_spiffs_info(NULL, &total, &used);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
+    }
+
+    struct stat st;
+    if (stat("/spiffs/landing_page.html", &st) == 0) {
+        ESP_LOGI(TAG, "Reading file");
+        FILE* file = fopen("/spiffs/landing_page.html", "r");
+        if (file == NULL) {
+            ESP_LOGE(TAG, "Failed to open file for reading");
+            return ESP_ERR_NOT_FOUND;
+        }
+
+        // iterate over the file and send the chunks to the client
+        char line[256];
+        ssize_t read;
+
+        while ((read = fread(line, 1, sizeof(line), file)) > 0) {
+            ESP_ERROR_CHECK(httpd_resp_send_chunk(req, line, read));
+        }
+
+        ESP_ERROR_CHECK(httpd_resp_send_chunk(req, NULL, 0));
+        
+        fclose(file);
+    } else {
+        ESP_LOGE(TAG, "landing_page.html not found");
+        ESP_ERROR_CHECK(httpd_resp_send_404(req));
+    }
+
+
+    esp_vfs_spiffs_unregister(NULL);
+
+    return ESP_OK;
+}
+
+/* Server status handler */
+esp_err_t Server::status_handler(httpd_req_t *req)
+{
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddStringToObject(json, "status", "ok");
+    char *resp_str = cJSON_Print(json);
+    ESP_ERROR_CHECK(httpd_resp_set_type(req, "application/json"));
+    ESP_ERROR_CHECK(httpd_resp_send(req, resp_str, strlen(resp_str)));
+
+    cJSON_Delete(json);
+    free(resp_str);
+
+    return ESP_OK;
+}
+
+/* Handler to change the led strip */
+esp_err_t Server::color_handler(httpd_req_t *req){
     char buf[200];
     int ret, remaining = req->content_len;
 
@@ -237,3 +306,5 @@ esp_err_t Server::color_handler(httpd_req_t *req)
     cJSON_Delete(jsonData);
     return ESP_OK;
 }
+
+

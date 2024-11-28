@@ -74,6 +74,9 @@
         "cinttypes": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "spiffs_api.h": "c",
+        "esp_vfs.h": "c",
+        "strstream": "cpp"
     }
 }
